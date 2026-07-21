@@ -11,27 +11,76 @@
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('home')" :active="request()->routeIs('home', 'blog.*')">
-                        {{ __('Beranda') }}
-                    </x-nav-link>
-                    @auth
-                        <x-nav-link :href="route('articles.index')" :active="request()->routeIs('articles.*')">
-                            {{ __('Artikel') }}
-                        </x-nav-link>
-                        @if (auth()->user()->role === 'admin')
-                            <x-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')">
-                                {{ __('Kategori') }}
-                            </x-nav-link>
-                            <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                                {{ __('Dashboard') }}
-                            </x-nav-link>
-                        @endif
-                    @endauth
-                    <x-nav-link :href="route('contact')" :active="request()->routeIs('contact')">
-                        {{ __('Contact Me!') }}
-                    </x-nav-link>
+                <div class="hidden sm:ms-10 sm:flex sm:items-center sm:space-x-8">
+    {{-- Beranda --}}
+    <x-nav-link :href="route('home')" :active="request()->routeIs('home', 'blog.*')">
+        {{ __('Beranda') }}
+    </x-nav-link>
+
+    @auth
+        {{-- Management Artikel --}}
+        <div class="relative" x-data="{ open: false }">
+            <button
+                @click="open = !open"
+                @click.away="open = false"
+                class="inline-flex items-center h-full px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out
+                {{
+                    request()->routeIs('articles.*') || request()->routeIs('categories.*')
+                        ? 'border-indigo-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }}">
+                <span>Management Artikel</span>
+
+                <svg class="ms-1 h-4 w-4 transition-transform duration-200"
+                    :class="{ 'rotate-180': open }"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            <div
+                x-show="open"
+                x-transition
+                class="absolute left-0 mt-2 w-48 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+                style="display:none">
+
+                <div class="py-1">
+
+                    <a href="{{ route('articles.index') }}"
+                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Artikel
+                    </a>
+
+                    @if(auth()->user()->role === 'admin')
+                        <a href="{{ route('categories.index') }}"
+                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            Kategori
+                        </a>
+                    @endif
+
                 </div>
+            </div>
+        </div>
+
+        {{-- Dashboard --}}
+        @if(auth()->user()->role === 'admin')
+            <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                {{ __('Dashboard') }}
+            </x-nav-link>
+        @endif
+    @endauth
+
+    {{-- Contact --}}
+    <x-nav-link :href="route('contact')" :active="request()->routeIs('contact')">
+        {{ __('Contact Me!') }}
+    </x-nav-link>
+</div>
             </div>
 
             <!-- Settings Dropdown -->
