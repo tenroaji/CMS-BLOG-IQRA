@@ -1,14 +1,16 @@
-@extends('layouts.app')
+<x-app-layout>
+    <x-slot name="header">
+        <a href="{{ route('home') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">← Kembali ke artikel</a>
+    </x-slot>
 
-@section('content')
-    <body>
-        <h1>Blog disini</h1>
-        <h3>Judul artikel 1</h3>
-        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Error, incidunt ipsa? Molestias, repellendus commodi. Expedita eum quaerat, blanditiis quisquam asperiores maiores quidem, deleniti eveniet, repellendus qui quis quia illo illum?</p>
-
-        <h3>Judul artikel </h3>
-        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Error, incidunt ipsa? Molestias, repellendus commodi. Expedita eum quaerat, blanditiis quisquam asperiores maiores quidem, deleniti eveniet, repellendus qui quis quia illo illum?</p>
-    </body>
-@endsection
-
+    <article class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+        <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400">{{ $article->category->name }}</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">{{ $article->title }}</h1>
+        <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Oleh {{ $article->user->name }} · {{ $article->published_at?->translatedFormat('d F Y') }}</p>
+        @if ($article->thumbnail)
+            <img src="{{ asset('storage/'.$article->thumbnail) }}" alt="Thumbnail {{ $article->title }}" class="mt-8 w-full rounded-lg object-cover">
+        @endif
+        <div class="mt-8 whitespace-pre-line text-base leading-8 text-gray-700 dark:text-gray-200">{{ $article->content }}</div>
+    </article>
+</x-app-layout>
 

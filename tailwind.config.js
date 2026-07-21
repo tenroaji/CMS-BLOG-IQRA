@@ -4,9 +4,9 @@ import forms from '@tailwindcss/forms';
 /** @type {import('tailwindcss').Config} */
 export default {
     content: [
-        './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
-        './storage/framework/views/*.php',
-        './resources/views/**/*.blade.php',
+        './resources/views/{articles,auth,categories,components,layouts,pagination,profile}/**/*.blade.php',
+        './resources/views/partials/footer.blade.php',
+        './resources/views/{about,blog,contact,dashboard,home}.blade.php',
     ],
 
     theme: {

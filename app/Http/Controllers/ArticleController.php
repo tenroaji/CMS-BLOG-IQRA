@@ -2,84 +2,104 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreArticleRequest;
+use App\Http\Requests\UpdateArticleRequest;
+use App\Models\Article;
+use App\Models\Category;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-
-
-
-/*
-index() - list artikel (admin, dengan filter status/kategori/penulis)
-create(), store() - tambah artikel (termasuk upload thumbnail)
-edit(), update() - edit artikel
-destroy() - hapus artikel
-Method tambahan: publish() atau toggle status untuk publish/unpublish
-*/
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class ArticleController extends Controller
 {
-    // Admin & Penulis bisa lihat semua artikel
-    public function index()
+    public function index(Request $request): View
     {
-        $articles = Article::with('category', 'user')->latest()->paginate(10);
-        return view('articles.index', compact('articles'));
-    }
+        Gate::authorize('viewAny', Article::class);
 
-    // Admin & Penulis bisa buat artikel baru
-    public function create()
-    {
-        $categories = Category::all();
-        return view('articles.create', compact('categories'));
-    }
+        $articles = Article::query()
+            ->with(['category:id,name', 'user:id,name'])
+            ->when($request->filled('search'), fn ($query) => $query->where('title', 'like', '%'.$request->string('search')->trim().'%'))
+            ->when($request->filled('category'), fn ($query) => $query->where('category_id', $request->integer('category')))
+            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
+            ->when($request->user()->role !== 'admin', fn ($query) => $query->whereBelongsTo($request->user()))
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'title' => 'required|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'content' => 'required',
-            'thumbnail' => 'nullable|image|max:2048',
+        return view('articles.index', [
+            'articles' => $articles,
+            'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
         ]);
-
-        $validated['user_id'] = auth()->id(); // otomatis milik yang login
-        Article::create($validated);
-
-        return redirect()->route('articles.index')->with('success', 'Artikel dibuat.');
     }
 
-    // Admin bisa edit semua, Penulis hanya edit miliknya sendiri
-    public function edit(Article $article)
+    public function create(): View
     {
-        if (auth()->user()->role !== 'admin' && $article->user_id !== auth()->id()) {
-            abort(403, 'Anda tidak punya akses ke artikel ini.');
-        }
+        Gate::authorize('create', Article::class);
 
-        $categories = Category::all();
-        return view('articles.edit', compact('article', 'categories'));
+        return view('articles.create', ['categories' => Category::query()->orderBy('name')->get(['id', 'name'])]);
     }
 
-    public function update(Request $request, Article $article)
+    public function store(StoreArticleRequest $request): RedirectResponse
     {
-        if (auth()->user()->role !== 'admin' && $article->user_id !== auth()->id()) {
-            abort(403);
-        }
+        $article = Article::create($this->articleAttributes($request));
 
-        $validated = $request->validate([
-            'title' => 'required|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'content' => 'required',
+        return redirect()->route('articles.edit', $article)->with('success', 'Artikel berhasil dibuat.');
+    }
+
+    public function edit(Article $article): View
+    {
+        Gate::authorize('update', $article);
+
+        return view('articles.edit', [
+            'article' => $article,
+            'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
         ]);
-
-        $article->update($validated);
-        return redirect()->route('articles.index')->with('success', 'Artikel diperbarui.');
     }
 
-    // Hanya Admin yang bisa hapus (sesuai contoh sebelumnya)
-    public function destroy(Article $article)
+    public function update(UpdateArticleRequest $request, Article $article): RedirectResponse
     {
-        if (auth()->user()->role !== 'admin') {
-            abort(403, 'Hanya admin yang bisa menghapus artikel.');
-        }
+        $article->update($this->articleAttributes($request, $article));
 
+        return redirect()->route('articles.edit', $article)->with('success', 'Artikel berhasil diperbarui.');
+    }
+
+    public function destroy(Article $article): RedirectResponse
+    {
+        Gate::authorize('delete', $article);
+
+        if ($article->thumbnail) {
+            Storage::disk('public')->delete($article->thumbnail);
+        }
         $article->delete();
-        return redirect()->route('articles.index')->with('success', 'Artikel dihapus.');
+
+        return redirect()->route('articles.index')->with('success', 'Artikel berhasil dihapus.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function articleAttributes(StoreArticleRequest|UpdateArticleRequest $request, ?Article $article = null): array
+    {
+        $attributes = $request->safe()->except('thumbnail');
+
+        if ($request->hasFile('thumbnail')) {
+            if ($article?->thumbnail) {
+                Storage::disk('public')->delete($article->thumbnail);
+            }
+
+            $attributes['thumbnail'] = $request->file('thumbnail')->store('thumbnails', 'public');
+        }
+
+        $attributes['published_at'] = $attributes['status'] === 'published'
+            ? ($article?->published_at ?? now())
+            : null;
+
+        if ($article === null) {
+            $attributes['user_id'] = $request->user()->id;
+        }
+
+        return $attributes;
     }
 }

@@ -5,8 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        
-        <title class="text-white">@yield('judul')</title>
+        <title>{{ config('app.name', 'CMS Blog') }}@hasSection('judul') — @yield('judul')@endif</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -29,12 +28,14 @@
             @endisset
 
             <!-- Page Content -->
-            <main class="text-white">
-                @yield('content')
+            <main>
+                @isset($slot)
+                    {{ $slot }}
+                @else
+                    @yield('content')
+                @endisset
             </main>
-            <div class="text-white">
-                @include('partials.footer')
-            </div>
+            @include('partials.footer')
         </div>
     </body>
 </html>
